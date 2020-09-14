@@ -2,14 +2,14 @@
 
 import ctypes
 
-"""
 libcorrect = ctypes.CDLL("../../libcorrect/build/lib/libcorrect.so")
 
-conv = libcorrect.correct_convolutional_create(
-    ctypes.c_size_t(4),
-    ctypes.c_size_t(5),
-    (ctypes.c_uint16 * 4)(0b11001, 0b10111, 0b11101, 0b11011))
-"""
+# Create a codec for the rate 1/4 mother code
+conv_1_4 = libcorrect.correct_convolutional_create(
+    ctypes.c_size_t(4), # Inverse rate
+    ctypes.c_size_t(5), # Order
+    (ctypes.c_uint16 * 4)(0b10011, 0b11101, 0b10111, 0b11011)  # Polynomials
+    )
 
 # Do the stuff from EN 300 396-2 8.2.5.2
 # e is the DM colour code, a byte array or list of length 30
@@ -38,3 +38,61 @@ def deinterleave(bits, a = 11):
     K = len(bits)
     return bytes(bits[(a * (i+1)) % K] for i in range(K))
 
+
+
+def hard_to_soft_bit(bit):
+    return 0xFF if bit else 0x00
+
+def soft_to_hard_bit(softbit):
+    return 1 if softbit >= 0x80 else 0
+
+def hard_to_soft(bits):
+    return bytes(map(hard_to_soft_bit, bits))
+
+def soft_to_hard(softbits):
+    return bytes(map(soft_to_hard_bit, softbits))
+
+
+# Depuncturing for rate 2/3. Input should be soft bits.
+# TODO: other rates
+def depuncture_2_3(b3):
+    # Parameters
+    K3 = len(b3)
+    K2 = int(K3 * 2 / 3)
+    t = 3
+    P = (None, 1, 2, 5)
+
+    # Mark everything that does not get filled as an erasure (0x80)
+    V = [0x80] * (4 * K2)
+
+    for j in range(1, 1+K3):
+        i = j
+        k = 8 * ((i - 1) // t) + P[i - t * ((i - 1) // t)]
+        V[k-1] = b3[j-1]
+
+    return bytes(V)
+
+
+# Decode rate 1/4 mother code
+def decode_1_4(softbits):
+    decoded = ctypes.create_string_buffer(len(softbits)) # TODO: proper size
+    n_decoded = libcorrect.correct_convolutional_decode_soft(
+        conv_1_4, # Codec
+        ctypes.c_char_p(softbits), # Encoded soft bits
+        ctypes.c_size_t(len(softbits)), # Number of encoded bits
+        decoded, # Buffer for decoded data
+    )
+
+    # libcorrect returns 8 bits packed into a byte,
+    # but we want just 1 bit per byte, so unpack
+    return bytes(((decoded[i // 8][0] >> (7 - (i % 8))) & 1) for i in range(76))
+
+
+# (K1+16, K1) block code from EN 300 396-2 8.2.3.2, i.e. CRC
+def crc16(bits):
+    crc = 0xFFFF  # Shift register stored as an integer
+    CRCPOLY = 0x8408
+    for b in bits:
+        crc = (crc >> 1) ^ (CRCPOLY if ((b ^ crc) & 1) else 0)
+    crc ^= 0xFFFF
+    return bytes(((crc >> i) & 1) for i in range(16))
