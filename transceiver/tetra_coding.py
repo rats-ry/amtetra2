@@ -62,8 +62,10 @@ def depuncture_2_3(b3):
     t = 3
     P = (None, 1, 2, 5)
 
-    # Mark everything that does not get filled as an erasure (0x80)
-    V = [0x80] * (4 * K2)
+    # Mark everything that does not get filled as an erasure (0x80).
+    # Add 16 extra erasures in the end, since the libcorrect decoder
+    # seems to need them to decode the last bits correctly.
+    V = [0x80] * (4 * K2 + 16)
 
     for j in range(1, 1+K3):
         i = j
