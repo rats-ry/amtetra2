@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# This file contains functions used for conversion between type-1 and type-5
+# bits in lower MAC. These process individual bursts or blocks, and don't
+# store state in between calls.
+
 import ctypes
 
 libcorrect = ctypes.CDLL("../../libcorrect/build/lib/libcorrect.so")
