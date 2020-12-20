@@ -7,11 +7,15 @@
 import ctypes
 
 libcorrect = ctypes.CDLL("../../libcorrect/build/lib/libcorrect.so")
+libcorrect.correct_convolutional_create.restype = ctypes.c_void_p
+libcorrect.correct_convolutional_create.argtypes = (ctypes.c_size_t, ctypes.c_size_t, ctypes.POINTER(ctypes.c_uint16))
+libcorrect.correct_convolutional_decode_soft.restype = ctypes.c_ssize_t
+libcorrect.correct_convolutional_decode_soft.argtypes = (ctypes.c_void_p, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p)
 
 # Create a codec for the rate 1/4 mother code
 conv_1_4 = libcorrect.correct_convolutional_create(
-    ctypes.c_size_t(4), # Inverse rate
-    ctypes.c_size_t(5), # Order
+    4, # Inverse rate
+    5, # Order
     (ctypes.c_uint16 * 4)(0b10011, 0b11101, 0b10111, 0b11011)  # Polynomials
     )
 
@@ -84,8 +88,8 @@ def decode_1_4(softbits):
     decoded = ctypes.create_string_buffer(len(softbits)) # TODO: proper size
     n_decoded = libcorrect.correct_convolutional_decode_soft(
         conv_1_4, # Codec
-        ctypes.c_char_p(softbits), # Encoded soft bits
-        ctypes.c_size_t(len(softbits)), # Number of encoded bits
+        softbits, # Encoded soft bits
+        len(softbits), # Number of encoded bits
         decoded, # Buffer for decoded data
     )
 
