@@ -3,6 +3,12 @@
 # Some "manual" tests for L2 coding functions
 
 import l2_coding as coding, debug
+import numpy as np
+
+def bytes_to_np(b):
+    """Convert from old representation of bits (bytes object) into the new representation (numpy array).
+    This is mainly used for testing before all of the code is converted to use numpy arrays."""
+    return np.frombuffer(b, dtype=np.uint8)
 
 # Bits demodulated from DMO synchronization bursts
 burst_strs = [
@@ -14,10 +20,14 @@ burst_strs = [
     "00 01 01 00 01 11 10 11 11 11 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 11 11 11 11 10 00 11 11 11 10 01 00 11 11 01 11 00 01 10 10 11 01 00 00 01 01 11 01 10 10 01 11 10 10 11 11 00 10 10 11 10 10 11 11 11 11 01 00 00 00 11 11 10 00 11 11 01 01 01 11 00 11 10 00 11 00 00 01 10 01 11 00 11 10 10 01 11 00 00 01 10 01 11 00 01 11 11 01 10 00 10 11 11 01 10 10 10 10 00 11 01 01 00 10 00 01 01 11 00 11 10 10 10 11 01 10 00 10 11 00 10 11 10 10 01 11 00 00 00 11 01 10 00 01 10 11 00 10 00 00 01 11 00 00 00 01 11 11 01 01 01 10 01 10 10 00 10 01 01 11 11 11 00 01 11 11 01 10 10 00 10 01 01 01 10 10 10 01 00 10 10 01 10 10 10 00 10 11 01 10 10 00",
     "00 01 01 00 01 11 10 11 11 11 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 11 11 11 11 10 10 11 11 11 00 00 00 11 11 11 11 00 01 10 10 01 00 00 00 00 01 11 01 10 10 10 01 11 10 11 10 10 10 10 11 10 01 11 11 11 11 01 00 01 00 11 11 10 00 01 11 01 00 01 11 00 11 10 11 11 00 00 01 10 01 11 00 11 10 10 01 11 00 00 01 10 01 11 00 01 11 11 01 10 00 10 11 11 01 10 10 10 10 00 11 01 01 00 10 00 01 01 11 00 11 10 10 10 11 01 10 00 10 11 00 10 11 10 10 01 11 00 00 00 11 01 10 00 01 10 11 00 10 00 00 01 11 00 00 00 01 11 11 01 01 01 10 01 10 10 00 10 01 01 11 11 11 00 01 11 11 01 10 10 00 10 01 01 01 10 10 10 01 00 10 10 01 10 10 10 00 10 11 01 10 10 00"
 ]
+
+punct_2_3 = coding.generate_puncturing_pattern(120, (2,3))
+
 for burst_str in burst_strs:
 
     # Handle the burst as a byte array, each byte representing one bit
     burst = bytes(1 if c=="1" else 0 for c in burst_str.replace(" ", ""))
+    burst = bytes_to_np(burst)
 
     # Split into fields
     sb_bits5 = burst[94:214]  # Scrambled synchronization block 1 type 5 bits
@@ -35,7 +45,7 @@ for burst_str in burst_strs:
 
     debug.print_bits("Type 3:", sb_bits3)
 
-    sb_depunct = coding.depuncture_2_3(coding.hard_to_soft(sb_bits3))
+    sb_depunct = coding.depuncture(coding.hard_to_soft(sb_bits3), punct_2_3)
     debug.print_softbits("Depunctured:", sb_depunct)
     sb_bits2 = coding.decode_1_4(sb_depunct)
     debug.print_bits("Type 2:", sb_bits2)
@@ -60,7 +70,7 @@ for i in range(N):
     sb_bits5 = burst[94:214]
     sb_bits4 = coding.descramble(sb_bits5, coding.sb_scrambling)
     sb_bits3 = coding.deinterleave(sb_bits4, 11)
-    sb_depunct = coding.depuncture_2_3(coding.hard_to_soft(sb_bits3))
+    sb_depunct = coding.depuncture(coding.hard_to_soft(sb_bits3), punct_2_3)
     sb_bits2 = coding.decode_1_4(sb_depunct)
     crc = coding.crc16(sb_bits2[0:-16])
 
