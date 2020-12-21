@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-
-# Functions used to show debugging and diagnostic information
-# for development, testing and monitoring purposes
+"""Functions used to show debugging and diagnostic information
+for development, testing and monitoring purposes"""
 
 def print_bits(text, bits):
     print(text, "".join("\033[3%dm%d" % (2+b, b) for b in bits), "\033[0m")
@@ -23,3 +22,6 @@ def softbit_to_text(b):
 def print_softbits(text, softbits):
     print(text, "".join(map(softbit_to_text, softbits)), "\033[0m")
 
+def print_dict(d):
+    for key, val in d.items():
+        print("%30s: %30s" % (key, val))

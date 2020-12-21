@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-
-# This file contains functions used for conversion between type-1 and type-5
-# bits in lower MAC. These process individual bursts or blocks, and don't
-# store state in between calls.
+"""Channel coding in L2.
+This module contains functions used for conversion between type-1 and type-5
+bits in lower MAC. These process individual bursts or blocks, and don't
+store state in between calls."""
 
 import ctypes
 import numpy as np
@@ -50,12 +50,14 @@ def scramble_soft(bits, seq):
 descramble = scramble
 descramble_soft = scramble_soft
 
-def deinterleave(bits, a = 11):
-    """Convert type 4 bits to type 3 bits
-    according to EN 300 396-2 8.2.4.1"""
-    # TODO: write this as a vector operation too, taking an interleaving pattern
-    K = len(bits)
-    return np.fromiter((bits[(a * (i+1)) % K] for i in range(K)), dtype=np.uint8)
+def generate_deinterleaving_pattern(K, a):
+    """Generate an interleaving pattern to convert between type 4 and type 3 bits
+    according to EN 300 396-2 8.2.4.1."""
+    return np.fromiter((((a * (i+1)) % K) for i in range(K)), dtype=np.int)
+
+def deinterleave(bits, pattern):
+    """Convert type 4 bits to type 3 bits using an interleaving pattern"""
+    return bits[pattern]
 
 
 def hard_to_soft(bits):
@@ -109,17 +111,18 @@ def decode_1_4(softbits):
     """Decode rate 1/4 mother code"""
     if softbits.dtype != np.uint8:
         raise TypeError("dtype should be uint8")
-    decoded = np.zeros(len(softbits), dtype=np.uint8) # TODO: proper size
+    decoded = np.zeros(len(softbits) // (4*8) + 1, dtype=np.uint8)
     n_decoded = libcorrect.correct_convolutional_decode_soft(
         conv_1_4, # Codec
         ctypes.c_char_p(softbits.ctypes.data), # Encoded soft bits
         len(softbits), # Number of encoded bits
         ctypes.c_char_p(decoded.ctypes.data), # Buffer for decoded data
     )
+    assert n_decoded <= len(decoded)
 
     # libcorrect returns 8 bits packed into a byte,
     # but we want just 1 bit per byte, so unpack
-    return np.unpackbits(decoded[0:10], bitorder="big")[0:76]
+    return np.unpackbits(decoded, bitorder="big")[0:76]
 
 
 def crc16(bits):

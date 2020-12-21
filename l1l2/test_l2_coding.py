@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
+"""Some "manual" tests for L2 coding functions"""
 
-# Some "manual" tests for L2 coding functions
-
-import l2_coding as coding, debug
+import l2_coding as coding
+import debug, pdu
 import numpy as np
 
 def bytes_to_np(b):
@@ -22,6 +22,7 @@ burst_strs = [
 ]
 
 punct_2_3 = coding.generate_puncturing_pattern(120, (2,3))
+deint_11 = coding.generate_deinterleaving_pattern(K = 120, a = 11)
 
 for burst_str in burst_strs:
 
@@ -41,7 +42,7 @@ for burst_str in burst_strs:
     debug.print_bits("Type 4:", sb_bits4)
 
     # Convert to type 3 bits
-    sb_bits3 = coding.deinterleave(sb_bits4, 11)
+    sb_bits3 = coding.deinterleave(sb_bits4, deint_11)
 
     debug.print_bits("Type 3:", sb_bits3)
 
@@ -56,9 +57,7 @@ for burst_str in burst_strs:
     debug.print_bits("Calculated CRC:", coding.crc16(sb_bits1))
 
     # Show some DMAC-SYNC PDU contents in SCH/S
-    debug.print_bits("A/B:", sb_bits1[10:12])
-    debug.print_bits("Slot number:", sb_bits1[12:14])
-    debug.print_bits("Frame number:", sb_bits1[14:19])
+    debug.print_dict(pdu.unpack(sb_bits1, pdu.DMAC_SYNC_SCH_S))
 
 # Speedtest
 N = 10000
@@ -73,6 +72,8 @@ for i in range(N):
     sb_depunct = coding.depuncture(coding.hard_to_soft(sb_bits3), punct_2_3)
     sb_bits2 = coding.decode_1_4(sb_depunct)
     crc = coding.crc16(sb_bits2[0:-16])
+    sb_bits1 = sb_bits2[0:-16]
+    pdu.unpack(sb_bits1, pdu.DMAC_SYNC_SCH_S)
 
 t2 = time.time()
-print("Descrambled, deinterleaved and decoded %f blocks per second" % (N / (t2-t1)))
+print("Descrambled, deinterleaved, decoded and unpacked %f blocks per second" % (N / (t2-t1)))
