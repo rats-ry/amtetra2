@@ -28,12 +28,14 @@ DMAC_SYNC_SCH_S = (
     ("Reserved",              39, "bit", _zerobits(39), False) # For encryption
 )
 
+_powers_of_2 = 2**(127 - np.fromiter(range(128), dtype=np.int))
+
 # Functions to convert bit array into another type
 _bits_to_type = {
     "bit"  : lambda x: x,
     "byte" : lambda x: np.packbits(x),
     # There might be a simpler way to do this conversion...
-    "int"  : lambda x: np.dot(x[::-1], 2**np.fromiter(range(len(x)), dtype=np.int))
+    "int"  : lambda x: np.dot(_powers_of_2[-len(x):], x)
 }
 
 def unpack(bits, contents):

@@ -4,6 +4,7 @@
 import l2_coding as coding
 import debug, pdu
 import numpy as np
+import time, cProfile
 
 def bytes_to_np(b):
     """Convert from old representation of bits (bytes object) into the new representation (numpy array).
@@ -62,18 +63,20 @@ for burst_str in burst_strs:
 # Speedtest
 N = 10000
 
-import time
-t1 = time.time()
-
-for i in range(N):
+def test_things():
     sb_bits5 = burst[94:214]
     sb_bits4 = coding.descramble(sb_bits5, coding.sb_scrambling)
-    sb_bits3 = coding.deinterleave(sb_bits4, 11)
+    sb_bits3 = coding.deinterleave(sb_bits4, deint_11)
     sb_depunct = coding.depuncture(coding.hard_to_soft(sb_bits3), punct_2_3)
     sb_bits2 = coding.decode_1_4(sb_depunct)
     crc = coding.crc16(sb_bits2[0:-16])
     sb_bits1 = sb_bits2[0:-16]
-    pdu.unpack(sb_bits1, pdu.DMAC_SYNC_SCH_S)
+    return pdu.unpack(sb_bits1, pdu.DMAC_SYNC_SCH_S)
 
+
+t1 = time.time()
+#for i in range(N):
+#    test_things()
+cProfile.run("for i in range(N): test_things()")
 t2 = time.time()
 print("Descrambled, deinterleaved, decoded and unpacked %f blocks per second" % (N / (t2-t1)))

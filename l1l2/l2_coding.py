@@ -6,6 +6,7 @@ store state in between calls."""
 
 import ctypes
 import numpy as np
+import numba   # to make things run faster
 
 libcorrect = ctypes.CDLL("../../libcorrect/build/lib/libcorrect.so")
 libcorrect.correct_convolutional_create.restype = ctypes.c_void_p
@@ -124,7 +125,9 @@ def decode_1_4(softbits):
     # but we want just 1 bit per byte, so unpack
     return np.unpackbits(decoded, bitorder="big")[0:76]
 
+# If numba is not available, just remove the @numba.jit line.
 
+@numba.jit
 def crc16(bits):
     """(K1+16, K1) block code from EN 300 396-2 8.2.3.2, i.e. CRC"""
     crc = 0xFFFF  # Shift register stored as an integer
@@ -132,4 +135,8 @@ def crc16(bits):
     for b in bits:
         crc = (crc >> 1) ^ (CRCPOLY if ((b ^ crc) & 1) else 0)
     crc ^= 0xFFFF
-    return np.fromiter((((crc >> i) & 1) for i in range(16)), dtype=np.uint8)
+
+    crc_bits = np.zeros(16, dtype=np.uint8)
+    for i in range(16):
+        crc_bits[i] = (crc >> i) & 1
+    return crc_bits
