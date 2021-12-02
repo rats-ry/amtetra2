@@ -2,6 +2,7 @@
 """Functions to parse and create various types of PDUs"""
 
 import numpy as np
+import numba
 
 def _zerobits(n):
     return np.zeros(n, dtype=np.uint8)
@@ -28,14 +29,20 @@ DMAC_SYNC_SCH_S = (
     ("Reserved",              39, "bit", _zerobits(39), False) # For encryption
 )
 
-_powers_of_2 = 2**(127 - np.fromiter(range(128), dtype=np.int))
+@numba.njit()
+def _bits_to_int(bits):
+    v = 0
+    for b in bits:
+        v <<= 1
+        v |= b
+    return v
 
 # Functions to convert bit array into another type
 _bits_to_type = {
     "bit"  : lambda x: x,
     "byte" : lambda x: np.packbits(x),
     # There might be a simpler way to do this conversion...
-    "int"  : lambda x: np.dot(_powers_of_2[-len(x):], x)
+    "int"  : _bits_to_int,
 }
 
 def unpack(bits, contents):
