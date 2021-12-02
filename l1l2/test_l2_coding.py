@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Some "manual" tests for L2 coding functions"""
 
-import l2_coding as coding
-import debug, pdu
+import time
+import cProfile
+
 import numpy as np
-import time, cProfile
+
+import debug
+import l2_coding as coding
+import pdu_class as pdu
 
 def bytes_to_np(b):
     """Convert from old representation of bits (bytes object) into the new representation (numpy array).
@@ -58,7 +62,7 @@ for burst_str in burst_strs:
     debug.print_bits("Calculated CRC:", coding.crc16(sb_bits1))
 
     # Show some DMAC-SYNC PDU contents in SCH/S
-    debug.print_dict(pdu.unpack(sb_bits1, pdu.DMAC_SYNC_SCH_S))
+    debug.print_pdu(pdu.DMAC_SYNC_SCH_S(sb_bits1))
 
 # Speedtest
 N = 10000
@@ -71,12 +75,12 @@ def test_things():
     sb_bits2 = coding.decode_1_4(sb_depunct)
     crc = coding.crc16(sb_bits2[0:-16])
     sb_bits1 = sb_bits2[0:-16]
-    return pdu.unpack(sb_bits1, pdu.DMAC_SYNC_SCH_S)
+    return pdu.DMAC_SYNC_SCH_S(sb_bits1)
 
 
-t1 = time.time()
+t1 = time.perf_counter()
 #for i in range(N):
 #    test_things()
 cProfile.run("for i in range(N): test_things()")
-t2 = time.time()
+t2 = time.perf_counter()
 print("Descrambled, deinterleaved, decoded and unpacked %f blocks per second" % (N / (t2-t1)))
