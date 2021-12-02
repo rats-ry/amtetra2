@@ -23,10 +23,5 @@ def print_softbits(text, softbits):
     print(text, "".join(map(softbit_to_text, softbits)), "\033[0m")
 
 def print_pdu(d):
-    # jitclasses don't support __dict__ but dir() works,
-    # so use that and just don't show the extra things.
-    # There might be a nicer way to do this, such as adding a method
-    # in each PDU class to return the fields as a dict or a list.
-    for key in dir(d):
-        if key[0] != '_' and key != 'bits':
-            print("%30s: %30s" % (key, getattr(d, key)))
+    for key, value in d.list():
+        print("%30s: %30s" % (key, value))
